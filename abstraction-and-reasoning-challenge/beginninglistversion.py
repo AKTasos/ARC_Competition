@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from pathlib import Path
 from torch.utils.data import Dataset
-from collections import OrderedDict
 
 path = os.path.dirname(os.path.abspath(__file__))
 for dirname, _, filenames in os.walk(path):
@@ -99,8 +98,6 @@ class TrainParameters(): # train_data = train_task[0]['train'][0]       ['input'
     
     def __init__(self, train_data):
         self.train_data = (train_data)
-        self.input = np.array(train_data['input'])
-        self.output =np.array(train_data['output'])
         self.x_in = len(train_data['input'][0])
         self.x_out = len(train_data['output'][0])
         self.y_in = len(train_data['input'])
@@ -113,60 +110,49 @@ class TrainParameters(): # train_data = train_task[0]['train'][0]       ['input'
         # self.nb_of_colors_out = None
         self.case_by_color_in = []
         self.case_by_color_out = []
-        self.color_distrib = OrderedDict()
-        self.color_params = []
+        
         
     def colors_params(self):
-        colors_params
+        flat_in = [item for sublist in self.train_data['input'] for item in sublist]
+        flat_out = [item for sublist in self.train_data['output'] for item in sublist]
         
-        std = np.std(self.input)
-        self.color_distrib['std_x'] = np.std(self.input,axis=0)
-        self.color_distrib['std_y'] = np.std(self.input,axis=1)
+        # self.colors_in = ''.join(map(str, sorted(set(flat_in))))
+        # self.colors_out = ''.join(map(str, sorted(set(flat_in))))
         
-        var = np.var(self.input)
-        self.color_distrib['var_x'] = np.var(self.input,axis=0)
-        self.color_distrib['var_y'] = np.var(self.input,axis=1)
+        # self.nb_of_colors_in = len(set(flat_in))
+        # self.nb_of_colors_out = len(set(flat_out))
         
-        for ele in self.color_distrib.values():
-        
-            self.color_params.append(np.median(ele))
-            self.color_params.append(np.mean(ele))
+        for x in range(10): 
+            self.case_by_color_in.append(flat_in.count(x))
+            self.case_by_color_out.append(flat_out.count(x))
             
-            for quantile in np.linspace(0, 1, 11):
-                self.color_params.append(np.quantile(ele, quantile))
+    # def return_parameters(self):
+        
+        
+            # flat_in.count(x) = ''.join(map(str, flat_in)))
+            # flat_out.count(x) = ''.join(map(str, flat_out)))
             
-            
-        for color in range(10): 
-            self.case_by_color_in.append(np.count_nonzero(self.input==color))
-            x,y=np.where(self.input==color)
-            np.std(x)
-            np.std(y)
-            np.var(x)
-            np.var(y)
-            np.std(x)/np.std(y)
-            np.var(x)/np.var(y)
-            np.std(x)/np.var(x)
-            np.std(y)/np.var(y)
-            np.mean(x)
-            np.mean(y)
-            np.median(x)
-            np.median(y)
-            self.case_by_color_out.append(np.count_nonzero(self.output==color))
-            x,y=np.where(self.output==color)
-            np.std(x)
-            np.std(y)
-            np.var(x)
-            np.var(y)
-            np.std(x)/np.std(y)
-            np.var(x)/np.var(y)
-            np.std(x)/np.var(x)
-            np.std(y)/np.var(y)
-            np.mean(x)
-            np.mean(y)
-            np.median(x)
-            np.median(y)
-    
+      def color_distrib(self):      
           
-
+          for color in range(10):
+              
+          
+          
+          
+          
+          
+          # list version
+          # for color in range(10):
+          #     for y in range(len(self.train_data)):
+          #         try : 
+          #             n = y.count(color)
+          #             for i in range(n)
+          #                 y.index(color)
+          #         except ValueError:
+          #             pass
+                      
+                  
+          #         for x in range (len(self.train_data[y])):
+                      
   
         
