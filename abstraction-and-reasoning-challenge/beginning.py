@@ -45,12 +45,12 @@ def data_openner(tasks, path):
 train_task = data_openner(training_tasks, training_path)      
 
 
-def data_process(task_list):
+# def data_process(task_list):
     
 
-class ARCDataset(dataset):
+# # class ARCDataset(dataset):
     
-    def __init__(self, task_list):
+# #     def __init__(self, task_list):
         
     
 
@@ -62,36 +62,34 @@ class TaskParameters():
         self.task = task
         self.nb_of_train = len(task['train'])
         self.train_list = []
-        
-        
+    
+            
     def train_params(self):
-        
-        
         for train in self.task['train']:
             data = TrainParameters(train)
             data.colors_params()
-            self.train_list.append(data.__dict__)
-          
+            # self.train_list.append(data.__dict__)  ##bring all attributes in a dictionary
+            self.train_list.append(data.color_params)
                
-    def size_rules(self):
-        self.train_list
+    # def size_rules(self):
+    #     self.train_list
         
-        self.train_data = train_data
-        self.x_in = len(train_data['input'][0])
-        self.x_out = len(train_data['output'][0])
-        self.y_in = len(train_data['input'])
-        self.y_out = len(train_data['output'])
-        self.ratio_in = self.x_in / self.y_in
-        self.ratio_out =self.x_out / self.y_out
+    #     self.train_data = train_data
+    #     self.x_in = len(train_data['input'][0])
+    #     self.x_out = len(train_data['output'][0])
+    #     self.y_in = len(train_data['input'])
+    #     self.y_out = len(train_data['output'])
+    #     self.ratio_in = self.x_in / self.y_in
+    #     self.ratio_out =self.x_out / self.y_out
         
-    def colors_rules(self):
+    # def colors_rules(self):
         
-        self.colors_in = None
-        self.colors_out = None
-        self.nb_of_colors_in = None
-        self.nb_of_colors_out = None
-        self.case_by_color_in = str()
-        self.case_by_color_out = str()
+    #     self.colors_in = None
+    #     self.colors_out = None
+    #     self.nb_of_colors_in = None
+    #     self.nb_of_colors_out = None
+    #     self.case_by_color_in = str()
+    #     self.case_by_color_out = str()
         
         
         
@@ -101,70 +99,88 @@ class TrainParameters(): # train_data = train_task[0]['train'][0]       ['input'
         self.train_data = (train_data)
         self.input = np.array(train_data['input'])
         self.output =np.array(train_data['output'])
+    
         self.x_in = len(train_data['input'][0])
         self.x_out = len(train_data['output'][0])
         self.y_in = len(train_data['input'])
         self.y_out = len(train_data['output'])
         self.ratio_in = self.x_in / self.y_in
         self.ratio_out =self.x_out / self.y_out
-        # self.colors_in = None
-        # self.colors_out = None
-        # self.nb_of_colors_in = None
-        # self.nb_of_colors_out = None
         self.case_by_color_in = []
         self.case_by_color_out = []
         self.color_distrib = OrderedDict()
-        self.color_params = []
+        self.train_params_names = x_in, y_in, x_out, y_out, ratio_in, ratio_out
+        self.train_params = [self.x_in, self.y_in, self.x_out, self.y_out, self.ratio_in, self.ratio_out]
         
     def colors_params(self):
-        colors_params
-        
-        std = np.std(self.input)
-        self.color_distrib['std_x'] = np.std(self.input,axis=0)
-        self.color_distrib['std_y'] = np.std(self.input,axis=1)
-        
-        var = np.var(self.input)
-        self.color_distrib['var_x'] = np.var(self.input,axis=0)
-        self.color_distrib['var_y'] = np.var(self.input,axis=1)
-        
-        for ele in self.color_distrib.values():
-        
-            self.color_params.append(np.median(ele))
-            self.color_params.append(np.mean(ele))
-            
-            for quantile in np.linspace(0, 1, 11):
-                self.color_params.append(np.quantile(ele, quantile))
+        no_color = [0]*14
+        for data in self.train_data.values():
+            data = np.array(data)    
             
             
-        for color in range(10): 
-            self.case_by_color_in.append(np.count_nonzero(self.input==color))
-            x,y=np.where(self.input==color)
-            np.std(x)
-            np.std(y)
-            np.var(x)
-            np.var(y)
-            np.std(x)/np.std(y)
-            np.var(x)/np.var(y)
-            np.std(x)/np.var(x)
-            np.std(y)/np.var(y)
-            np.mean(x)
-            np.mean(y)
-            np.median(x)
-            np.median(y)
-            self.case_by_color_out.append(np.count_nonzero(self.output==color))
-            x,y=np.where(self.output==color)
-            np.std(x)
-            np.std(y)
-            np.var(x)
-            np.var(y)
-            np.std(x)/np.std(y)
-            np.var(x)/np.var(y)
-            np.std(x)/np.var(x)
-            np.std(y)/np.var(y)
-            np.mean(x)
-            np.mean(y)
-            np.median(x)
-            np.median(y)
+            self.train_params.append(np.std(data))
+            self.color_distrib['std_x'] = np.std(data,axis=0)
+            self.color_distrib['std_y'] = np.std(data,axis=1)
+            
+            self.train_params.append(np.var(data))
+            self.color_distrib['var_x'] = np.var(data,axis=0)
+            self.color_distrib['var_y'] = np.var(data,axis=1)
+            
+            for ele in self.color_distrib.values():
+            
+                self.train_params.append(np.median(ele))
+                self.train_params.append(np.mean(ele))
+                
+                for quantile in np.linspace(0, 1, 11):
+                    self.train_params.append(np.quantile(ele, quantile))
+                
+                
+            for color in range(10): 
+                case_by_color = (np.count_nonzero(data==color))
+                if case_by_color == 0:  
+                    self.train_params.extend(no_color)
+                else:
+                    x,y=np.where(data==color)
+                    self.train_params.extend((color,
+                                              case_by_color, 
+                                              np.std(x), 
+                                              np.std(y), 
+                                              np.var(x), 
+                                              np.var(y), 
+                                              np.std(x)/np.std(y), 
+                                              np.var(x)/np.var(y), 
+                                              np.std(x)/np.var(x), 
+                                              np.std(y)/np.var(y), 
+                                              np.mean(x), 
+                                              np.mean(y), 
+                                              np.median(x), 
+                                              np.median(y)))
+                
+                
+                
+                
+                
+                
+                
+                # self.case_by_color_out.append(np.count_nonzero(self.output==color))
+                # if self.case_by_color_out[color] == 0:  
+                #     self.train_params.extend(no_color)
+                # else:
+                #     x,y=np.where(self.output==color)
+                #     self.train_params.extend((color, 
+                #                               self.case_by_color_out[color], 
+                #                               np.std(x), 
+                #                               np.std(y), 
+                #                               np.var(x), 
+                #                               np.var(y), 
+                #                               np.std(x)/np.std(y), 
+                #                               np.var(x)/np.var(y), 
+                #                               np.std(x)/np.var(x), 
+                #                               np.std(y)/np.var(y), 
+                #                               np.mean(x), 
+                #                               np.mean(y), 
+                #                               np.median(x), 
+                #                               np.median(y)))
     
           
 
