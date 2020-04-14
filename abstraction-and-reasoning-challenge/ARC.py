@@ -11,46 +11,81 @@ import numpy as np
 
 import os 
 import json
-
+from tensorfromdata import TensorDataset
 from pathlib import Path
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from collections import OrderedDict
-from descriptive_stats import ARCParameters
-path = os.path.dirname(os.path.abspath(__file__))
-for dirname, _, filenames in os.walk(path):
-        print(dirname)
+
+from networkcfc import FcNetwork
+import torch.optim as optim
+import torch.nn.functional as F
+import torch
+import pandas as pd
+
+
+
+def correct(preds, labels):
+    c=torch.eq(preds,labels)
+    return c.sum().item()
+
+data_path = "./training/params_data.json"
+
+params_data = TensorDataset(data_path)
+
+
+
+#parameters = dictionary of parameters for DataLoader and optim (dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
+parameters = dict(
+    lr = 0.00001
+    ,batch_size = 10
+    ,shuffle = False
+    ,epochs = 10
+    # ,nb_of_fclayers = [2,4]
+    # ,act_fonction=["relu","glu","tanh","sigmoid","softmax"]
+    # ,kernel_size = [4,8]
+    )
+
+
+  
+data_loader = DataLoader(dataset=params_data, batch_size=parameters['batch_size'], shuffle=False)
+
+
+fc = FcNetwork()
+
+optimizer = optim.SGD(fc.parameters(), lr=parameters['lr'])
+
+
+for epoch in range(parameters['epochs']):
+     total_loss = 0
+     total_correct = 0
+  
+     for batch in data_loader:
+       
+        in_data, out_data = batch
         
+        #runs the batch in the CNN
+        preds=fc(in_data.float())
+        
+        
+        #calculate Loss
+        loss = F.multilabel_soft_margin_loss(preds,out_data)
+        print(loss)
+        optimizer.zero_grad()
+        
+        #BackProp
+        loss.backward()
+        
+        #update weights
+        optimizer.step()
+        
+        total_loss += loss.item() * parameters['batch_size']
+        total_correct += correct(preds, out_data)
+        
+        
+        
+     print("epoch:", epoch ,"/  total_correct:", total_correct, "/  Loss:", loss)
+   
 
-
-data_path = Path(path)
-training_path = data_path / 'training'
-evaluation_path = data_path / 'evaluation'
-test_path = data_path / 'test'
-training_tasks = sorted(os.listdir(training_path))
-
-
-
-def data_openner(tasks, path):
-    task_list =[]
-    for task in tasks :
-        task_file = str(path / task)
-        with open(task_file, 'r') as f:
-            task_list.append(json.load(f))
-            
-    return task_list
-
-
-
-train_tasks = data_openner(training_tasks, training_path)      
-
-
-# first=TaskParameters(train_tasks[0])  
-# first.train_params()
-# first.compare_train()
-# first.count_good_params()
-
-results = ARCParameters(train_tasks)
-results.analyse_parameters()
 
 
 

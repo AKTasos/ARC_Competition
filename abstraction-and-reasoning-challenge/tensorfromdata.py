@@ -7,26 +7,32 @@ Created on Wed Mar 11 14:23:09 2020
 """
 from torch.utils.data import Dataset
 import os
-
+import pandas as pd
 import torch
-
+import numpy as np
 
 os.path.dirname(os.path.abspath(__file__))
 print(os.listdir())
-data_path = str
+data_path = "./training_results/params_data.json"
 
 
-class TensorDataset(Dataset):
+class TensorDataset(Dataset,task=None):
     
-    def __init__(self, data) : 
-        # data = pd.read_csv(data_path)
+    def __init__(self, data_path) : 
+        data = pd.read_json(data_path)
         # data = np.loadtxt("./input/data.csv", delimiter=',', dtype=np.float32, skiprows=1)
         try :
-            self.y = torch.from_numpy(data[1::2])
+            self.y = torch.FloatTensor(np.array(data.iloc[1::2]))
         except :
             self.y = None
-        self.x = torch.from_numpy(data[::2])
-        self.n_samples=data.shape[0]
+        self.x = torch.FloatTensor(np.array(data.iloc[::2]))
+        self.n_samples=len(data[1::2])
+        self.names = data.columns
+        self.task = task
+        
+    def task_data(self)    
+        if self.task != None:
+        
         
     def __getitem__(self, index):
         try :

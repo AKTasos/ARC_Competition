@@ -10,11 +10,11 @@ import torch.nn as nn
 
 
 class FcNetwork(nn.Module):
-    def __init__(self,in_feat=66, nb_of_fclayers=10, out_feat=66):
+    def __init__(self,in_feat=158, nb_of_fclayers=10, out_feat=158):
         
         self.in_channels = in_feat
-        self.hidden_layers_feat = 132
-        self.layer_output = 132
+        self.hidden_layers_feat = 316
+        self.layer_output = 316
         self.output = out_feat
         self.nb_of_fclayers = nb_of_fclayers
         
@@ -25,15 +25,15 @@ class FcNetwork(nn.Module):
       
         
         self.fc = []
-        self.fc += [nn.Linear(in_features = self.in_channels, out_features = self.hidden_layers_feat)
-                        , nn.LeakyReLU()]     
+        self.fc += [nn.Linear(in_features = self.in_channels, out_features = self.hidden_layers_feat)]     
         
-        for n in range(self.nb_of_fclayers-1) :
-            if n == self.nb_of_fclayers-2 :
-                self.out_features = self.output
-            self.fc += [nn.Linear(in_features = self.layer_output, out_features = self.layer_output)
-                        , nn.LeakyReLU()]     
+        for n in range(self.nb_of_fclayers-2) :
             
+            self.fc += [nn.Linear(in_features = self.layer_output, out_features = self.layer_output)]     
+        
+         
+        self.fc += [nn.Linear(in_features = self.layer_output, out_features = self.output)]  
+          
         self.fc = nn.Sequential(*self.fc)
 
 

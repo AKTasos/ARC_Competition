@@ -8,7 +8,33 @@ Created on Fri Mar 27 19:04:55 2020
 import itertools
 import numpy as np
 from collections import OrderedDict
+import os 
+from pathlib import Path
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
+path = os.path.dirname(os.path.abspath(__file__))
+for dirname, _, filenames in os.walk(path):
+        print(dirname)
+        
 
+
+data_path = Path(path)
+training_path = data_path / 'training'
+evaluation_path = data_path / 'evaluation'
+test_path = data_path / 'test'
+training_tasks = sorted(os.listdir(training_path))
+
+
+
+def data_openner(tasks, path):
+    task_list =[]
+    for task in tasks :
+        task_file = str(path / task)
+        with open(task_file, 'r') as f:
+            task_list.append(json.load(f))
+            
+    return task_list
 
 
     
@@ -17,26 +43,37 @@ class ARCParameters():
         self.tasks = train_tasks
         self.current_task = 0
         self.params_analysis_list = []
-        self.results = None
+        self.params_analysis_results = None
+        self.params_data = []
+        self.params_labels = []
         
     def analyse_parameters(self):
-        
+        n=0
         for task in self.tasks:
-           
+            n+=1
+            print(n)
             task_n = TaskParameters(task, self.current_task)
             task_n.train_params()
             task_n.compare_train()
             task_n.count_good_params()
+            # self.params_data.append(task_n.train_list)
             self.current_task += 1
             
             self.params_analysis_list.append(task_n.good_params)
             res = np.array(self.params_analysis_list)
-        self.results = np.sum(res, 0)
-        
+            self.params_data += [train for train in task_n.train_list ]
+            
+        self.params_analysis_results = np.sum(res, 0)
+        self.params_labels = task_n.params_labels
     # def results(self):
     #     for a, b in itertools.combinations(self.params_analysis_list, 2):
     #         print(a==b)
     #     for l in self.params_analysis_list:
+        
+    def save(self):
+        data =pd.DataFrame(self.params_data, columns=self.params_labels)
+        data.to_json("./training_results/params_data.json", orient='columns')
+        
             
 
 class TaskParameters(): 
@@ -51,6 +88,7 @@ class TaskParameters():
         self.good_params_count = []
         self.good_params = []
         self.nb_of_params = int()
+        self.params_labels = []
             
     def train_params(self):
         for train in self.task['train']:
@@ -58,12 +96,14 @@ class TaskParameters():
             data.colors_params()
             # self.train_list.append(data.__dict__)  ##bring all attributes in a dictionary
             self.train_dict_list.append(data.train_params_dict)
-            self.train_list.append(data.train_params)
+            self.train_list += data.train_params
         # self.params_comparison = self.train_list[0].fromkeys(self.train_list[0],[])
         # self.good_params_count = self.train_list[0].fromkeys(self.train_list[0],0)    
         self.nb_of_params = len(data.train_params_dict)
         self.good_params_count = [0]*self.nb_of_params
         self.good_params = [0]*self.nb_of_params
+        temp=[x for x in data.train_params_dict.keys()]
+        self.params_labels = temp[:(len(temp)//2)]
         
         
     def compare_train(self):     
@@ -89,12 +129,29 @@ class TaskParameters():
         
             self.good_params[int(g)] = 1 
             
-
+    def plot_params(self):
+        
+        for p in range(len(self.train_list[0])):
+            plt.figure()
+            plt.title(self.params_labels[p])
+            x = []
+            y = []
+            i=0
+            for n in range(self.nb_of_train):
+                x.append(self.train_list[i][p])
+                y.append(self.train_list[i+1][p])
+                i += 2
+            plt.scatter(x,y)    
+            plt.show()    
+           
+                    
+                
         
 class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input']
     
     def __init__(self, train_data, task_index):
         self.train_data = (train_data)
+        self.task_index = task_index
         self.input = np.array(train_data['input'])
         self.output =np.array(train_data['output'])
     
@@ -108,93 +165,112 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
         self.case_by_color_in = []
         self.case_by_color_out = []
         self.color_distrib = OrderedDict()
-        self.train_params_dict = OrderedDict([('task_index', task_index)])
+        self.train_params_dict = OrderedDict([])
         self.train_params = []
         
     def colors_params(self):
-        no_color = [0]*9
+        color_max = 0
+        nb_color_max = 0
+        color_min = 0
+        nb_color_min = 0
         for key, data in self.train_data.items():
+            
+            self.train_params_dict[f'{key}_task_index'] = self.task_index
             
             if key == 'input':
                 
-                self.train_params_dict['input'] = int('1'+(''.join(str(n) for l in self.train_data['input'] for n in l )))
+                self.train_params_dict['input'] = float('0.'+(''.join(str(n) for l in self.train_data['input'] for n in l )))
                 self.train_params_dict['x_in'] = self.x_in
                 self.train_params_dict['y_in'] = self.y_in
                 self.train_params_dict['ratio_in'] = self.ratio_in
+                nb_of_case = self.x_in * self.y_in
+                nb_color_min = nb_of_case
+                
             else : 
-                self.train_params_dict['output'] = int('1'+(''.join(str(n) for l in self.train_data['output'] for n in l )))
+                self.train_params_dict['output'] = float('0.'+(''.join(str(n) for l in self.train_data['output'] for n in l )))
                 self.train_params_dict['x_out'] = self.x_out
                 self.train_params_dict['y_out'] = self.y_out
                 self.train_params_dict['ratio_out'] = self.ratio_out
+                nb_of_case = self.x_out * self.y_out
+                nb_color_min = nb_of_case
                 
             data = np.array(data)    
             
             self.train_params_dict[key+"_stdev"] = (np.std(data))
-            self.train_params.append(np.std(data))
+           
             
             self.color_distrib['std_x'] = np.std(data,axis=0)
             self.color_distrib['std_y'] = np.std(data,axis=1)
             
-            self.train_params.append(np.var(data))
+            
             self.color_distrib['var_x'] = np.var(data,axis=0)
             self.color_distrib['var_y'] = np.var(data,axis=1)
             
             for i, ele in self.color_distrib.items():
             
                 self.train_params_dict[f"{key}_{i}_median"] = np.median(ele)
-                self.train_params.append(np.median(ele))
+               
                 
                 self.train_params_dict[f"{key}_{i}_mean"] = np.mean(ele)
-                self.train_params.append(np.mean(ele))
+                
                 
                 for quantile in np.linspace(0.1, 1, 11):
                     
                     self.train_params_dict[f"{key}_{i}_quantile_{quantile}"] = np.quantile(ele, quantile)
-                    self.train_params.append(np.quantile(ele, quantile))
+                   
                 
                 
             for color in range(10): 
                 case_by_color = (np.count_nonzero(data==color))
+                
                 if case_by_color == 0:  
-                    self.train_params_dict[f"{key}_color_{color}"] = [color] + no_color
-                    self.train_params.extend(no_color)
+                    self.train_params_dict.update({f"{key}_color_{color}": color, 
+                                                   f'{key}_color_{color}_case_by_color': 0, 
+                                                   f'{key}_color_{color}_proportion': 0, 
+                                                   f'{key}_color_{color}_stdev_x': 0, 
+                                                   f'{key}_color_{color}_stdev_y': 0, 
+                                                   f'{key}_color_{color}_var_x': 0, 
+                                                   f'{key}_color_{color}_var-y': 0,
+                                                   f'{key}_color_{color}_mean_x': 0, 
+                                                   f'{key}_color_{color}_mean_y': 0,
+                                                   f'{key}_color_{color}_median_x': 0, 
+                                                   f'{key}_color_{color}_median_y': 0
+                                                   })
                 else:
+                    
+                    if case_by_color > nb_color_max:
+                        nb_color_max = case_by_color
+                    if case_by_color < nb_color_min:
+                        nb_color_min = case_by_color
+                        
                     x,y = np.where(data==color)
                     
-                    self.train_params_dict[f"{key}_color_{color}"] = OrderedDict([
-                                                                                  ('color', color), 
-                                                                                  ('case_by_color', case_by_color), 
-                                                                                  ('stdev_x', np.std(x)), 
-                                                                                  ('stdev_y', np.std(y)), 
-                                                                                  ('var_x', np.var(x)), 
-                                                                                  ('var-y', np.var(y)),
-                                                                                  ('mean_x', np.mean(x)), 
-                                                                                  ('mean_y', np.mean(y)),
-                                                                                  ('median_x', np.median(x)), 
-                                                                                  ('median_y', np.median(y))
-                                                                                  # ('ratio_stdev', np.std(x)/np.std(y)), 
-                                                                                  # ('ratio_var', np.var(x)/np.var(y)), 
-                                                                                  # ('ratio_stdev_var_x', np.std(x)/np.var(x)), 
-                                                                                  # ('ratio_stdev_var_y', np.std(y)/np.var(y)) 
-                                                                                  ])
-                    self.train_params.extend((color,
-                                              case_by_color, 
-                                              np.std(x), 
-                                              np.std(y), 
-                                              np.var(x), 
-                                              np.var(y), 
-                                              # np.std(x)/np.std(y), 
-                                              # np.var(x)/np.var(y), 
-                                              # np.std(x)/np.var(x), 
-                                              # np.std(y)/np.var(y), 
-                                              np.mean(x), 
-                                              np.mean(y), 
-                                              np.median(x), 
-                                              np.median(y)))
-        
-        in_out = list(self.train_params_dict.values())            
-        self.train_params.append(in_out[:(len(in_out)/2)])
-        self.train_params.append(in_out[(len(in_out)/2):])
-                
+                    self.train_params_dict.update({f"{key}_color_{color}": color, 
+                                                   f'{key}_color_{color}_case_by_color': case_by_color,
+                                                   f'{key}_color_{color}_proportion': case_by_color/(nb_of_case), 
+                                                   f'{key}_color_{color}_stdev_x': np.std(x), 
+                                                   f'{key}_color_{color}_stdev_y': np.std(y), 
+                                                   f'{key}_color_{color}_var_x': np.var(x), 
+                                                   f'{key}_color_{color}_var-y': np.var(y),
+                                                   f'{key}_color_{color}_mean_x': np.mean(x), 
+                                                   f'{key}_color_{color}_mean_y': np.mean(y),
+                                                   f'{key}_color_{color}_median_x': np.median(x), 
+                                                   f'{key}_color_{color}_median_y': np.median(y)
+                                                   })
+                   
+    
+        in_out = list(self.train_params_dict.values())   
+        len(in_out)
+        self.train_params.append(in_out[:len(in_out)//2])           
+        self.train_params.append(in_out[len(in_out)//2:])          
 
 
+train_tasks = data_openner(training_tasks, training_path)      
+
+# arc_params = ARCParameters(train_tasks)
+# arc_params.analyse_parameters()
+# arc_params.save()
+first=TaskParameters(train_tasks[0],0)
+first.train_params()
+first.compare_train()
+first.count_good_params()
