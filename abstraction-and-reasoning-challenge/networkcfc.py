@@ -10,11 +10,11 @@ import torch.nn as nn
 
 
 class FcNetwork(nn.Module):
-    def __init__(self,in_feat=158, nb_of_fclayers=10, out_feat=158):
+    def __init__(self,in_feat=168, nb_of_fclayers=1000, out_feat=168):
         
         self.in_channels = in_feat
-        self.hidden_layers_feat = 316
-        self.layer_output = 316
+        self.hidden_layers_feat =672
+        self.layer_output = 672
         self.output = out_feat
         self.nb_of_fclayers = nb_of_fclayers
         
