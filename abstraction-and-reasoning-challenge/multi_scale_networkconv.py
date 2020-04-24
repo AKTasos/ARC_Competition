@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import math
 
 class CnnFcNetwork(nn.Module):
-    def __init__(self, torch_input, kernel_size=1, in_feat=3*3, out_feat=9*9*10, nb_of_fclayers=10):
+    def __init__(self, torch_input, kernel_size=1, in_feat=3*3, out_feat=9*9*2, nb_of_fclayers=10):
 
         self.in_channels = torch_input.shape[1]
         self.img_size = torch_input.shape[2]*torch_input.shape[3]
@@ -64,5 +64,5 @@ class CnnFcNetwork(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         
-        return x.view(x.shape[0],9,9,10)
+        return x.view(x.shape[0],9,9,2)
     # .argmax(dim=3)

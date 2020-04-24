@@ -15,6 +15,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tensorfromdata import TasksTensorDataset, FeaturesTensorDataset, data_openner
 from plot_task import plot_pred
+import numpy as np
+
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = Path(PATH)
@@ -36,6 +38,7 @@ parameters = dict(
     batch_size=1,
     shuffle=False,
     epochs=1000
+
     # ,nb_of_fclayers = [2,4]
     # ,act_fonction=["relu","glu","tanh","sigmoid","softmax"]
     # ,kernel_size = [4,8]
@@ -53,15 +56,17 @@ for epoch in range(parameters['epochs']):
 
     for batch in data_loader:
         in_data, out_data = batch
+        
         #runs the batch in the CNN
         preds = network(in_data.float())
-        plot_pred(preds.argmax(dim=3))
+       
+        # plot_pred(preds.argmax(dim=3))
         
         #calculate Loss
         n = 0
         loss = 0
         
-        loss = F.cross_entropy(preds.view(81,10), out_data.view(-1))
+        loss = F.cross_entropy(preds.view(81,2), out_data.view(-1))
         # loss.requires_grad = True
         optimizer.zero_grad()
         #BackProp
