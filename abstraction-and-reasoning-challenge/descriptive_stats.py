@@ -267,9 +267,9 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
 
 # train_tasks = data_openner(training_tasks, training_path)
 
-# # arc_params = ARCParameters(train_tasks)
-# # arc_params.analyse_parameters()
-# # arc_params.save()
+# arc_params = ARCParameters(train_tasks)
+# arc_params.analyse_parameters()
+# # # arc_params.save()
 # first = TaskParameters(train_tasks[0], 0)
 # first.train_params()
 # first.compare_train()

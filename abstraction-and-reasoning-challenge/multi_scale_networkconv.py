@@ -25,14 +25,14 @@ class CnnFcNetwork(nn.Module):
         # super function. It inherits from nn.Module and we can access everythink in nn.Module
         super(CnnFcNetwork, self).__init__()
         # Function.
-    # determine number of convolution according to size of image
-        self.nb_of_conv = int(math.log(self.img_size)/math.log(2))
+    # determine number of convolution according to size of image  int(math.log(self.img_size)/math.log(2)) 
+        self.nb_of_conv = 10
 
     # creating layers
 
-        self.cnn = []
+        self.cnnk1 = []
         for n in range(self.nb_of_conv):
-            self.cnn += [nn.Conv2d(self.in_channels, self.new_feat_map, self.kernel_size),
+            self.cnnk1 += [nn.Conv2d(self.in_channels, self.new_feat_map, kernel_size=1),
                 nn.BatchNorm2d(self.new_feat_map),
                 nn.LeakyReLU()]
 
@@ -40,29 +40,26 @@ class CnnFcNetwork(nn.Module):
             self.new_feat_map = self.new_feat_map*2
             self.layer_output = (self.layer_output-self.kernel_size)+1
 
-        self.cnn = nn.Sequential(*self.cnn)
+        self.cnnk1 = nn.Sequential(*self.cnnk1)
 
         self.layer_output = int(self.layer_output ** 2 * (self.new_feat_map/2))
-        self.n_delta = self.layer_output // nb_of_fclayers
-        self.out_features = self.layer_output - self.n_delta
-
+          
+        self.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d((10000))
 
         self.fc = []
         for n in range(self.nb_of_fclayers):
-            if n == self.nb_of_fclayers-1:
-                self.out_features = self.output
-            self.fc += [nn.Linear(in_features = self.layer_output, out_features = self.out_features)
+            
+            self.fc += [nn.Linear(in_features=10000, out_features=10000)
                         , nn.LeakyReLU()]
-            self.layer_output -= self.n_delta
-            self.out_features -= self.n_delta
-
+           
         self.fc = nn.Sequential(*self.fc)
 
 
     def forward(self, x):
-        x = self.cnn(x)
-        x = x.view(x.size(0), -1)
+        x = self.cnnk1(x)
+        x = x.view(1, 1, -1)
+        x = self.AdaptiveAvgPool1d(x)
         x = self.fc(x)
         
-        return x.view(x.shape[0],9,9,2)
+        return x
     # .argmax(dim=3)

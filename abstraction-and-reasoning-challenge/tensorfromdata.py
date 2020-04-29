@@ -39,8 +39,35 @@ def data_openner(tasks, path):
 train_tasks = data_openner(training_tasks, training_path)
 
 
+class AllTrainDataset(Dataset):
+    def __init__(self, train_tasks):
+        
+        self.tasks = train_tasks
+        self.y = []
+        self.x = []
+        self.n_samples = 0
+        for task in self.tasks:
+            for train in task['train']:
+                
+                self.x.append(train['input'])
+                self.y.append(train['output'])
+        self.n_samples = len(self.x)        
+        self.x_torch = torch.LongTensor(self.x).view(self.n_samples,1,3,3)
+        self.y_torch = torch.LongTensor(self.y).view(self.n_samples,9,9)
+        
+
+    def __getitem__(self, index):
+        try:
+            return self.x_torch[index], self.y_torch[index]
+        except:
+            return self.x_torch[index]
+        
+    def __len__(self):
+        return self.n_samples
+    
+    
 class TasksTensorDataset(Dataset): 
-    # train_tasks = train_tasks[x]
+    # task = train_tasks[x]
     def __init__(self, task):
         self.task = task
         self.y = []
