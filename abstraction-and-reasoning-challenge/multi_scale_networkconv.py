@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import math
 
 class CnnFcNetwork(nn.Module):
-    def __init__(self, torch_input, kernel_size=1, in_feat=3*3, out_feat=9*9*2, nb_of_fclayers=10):
+    def __init__(self, torch_input, kernel_size=1, in_feat=3*3, out_feat=9*9*2, nb_of_fclayers=5):
 
         self.in_channels = torch_input.shape[1]
         self.img_size = torch_input.shape[2]*torch_input.shape[3]
@@ -44,12 +44,14 @@ class CnnFcNetwork(nn.Module):
 
         self.layer_output = int(self.layer_output ** 2 * (self.new_feat_map/2))
           
-        self.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d((10000))
+        self.AdaptiveAvgPool1d = nn.AdaptiveAvgPool1d((1000))
 
         self.fc = []
         for n in range(self.nb_of_fclayers):
+            self.fc += [nn.Linear(in_features=1000, out_features=1000)
+                        , nn.LeakyReLU()]
             
-            self.fc += [nn.Linear(in_features=10000, out_features=10000)
+        self.fc += [nn.Linear(in_features=1000, out_features=30)
                         , nn.LeakyReLU()]
            
         self.fc = nn.Sequential(*self.fc)
@@ -61,5 +63,5 @@ class CnnFcNetwork(nn.Module):
         x = self.AdaptiveAvgPool1d(x)
         x = self.fc(x)
         
-        return x
+        return (x-min(x[0][0]))/(max(x[0][0])-min(x[0][0]))
     # .argmax(dim=3)

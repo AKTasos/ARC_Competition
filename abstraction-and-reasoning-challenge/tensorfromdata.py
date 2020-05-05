@@ -78,7 +78,7 @@ class TasksTensorDataset(Dataset):
             self.y.append(train['output'])
         self.x_torch = np.heaviside(torch.LongTensor(self.x).view(self.n_samples,1,3,3),0)
         self.y_array = np.heaviside(self.y, 0)
-        self.y_torch = torch.LongTensor(self.y_array).view(self.n_samples,9,9)
+        self.y_torch = torch.LongTensor(self.y_array).view(self.n_samples,1,9,9)
 
 
     def __getitem__(self, index):

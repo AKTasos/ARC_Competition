@@ -29,6 +29,10 @@ def correct(preds, labels):
     c=torch.eq(preds.argmax(dim=3),labels)
     return c.sum().item()
 
+def correct_output(preds, labels):
+    c=torch.eq(preds,labels)
+    return c.sum().item()
+
 def data_openner(tasks, path):
     """open and load json files"""
     task_list = []

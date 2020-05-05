@@ -8,7 +8,7 @@ Created on Fri Mar 27 19:04:55 2020
 import os
 from pathlib import Path
 from torch.utils.data import DataLoader
-from descriptive_stats import correct
+from descriptive_stats import correct_output
 from multi_scale_networkconv import CnnFcNetwork
 import torch.optim as optim
 import torch.nn as nn
@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from tensorfromdata import TasksTensorDataset, FeaturesTensorDataset, data_openner
 from plot_task import plot_pred
 import numpy as np
+from collections import OrderedDict
 
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +35,7 @@ task_data = TasksTensorDataset(train_tasks[0])
 
 #parameters = dictionary of parameters for DataLoader and optim (dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 parameters = dict(
-    lr=0.01,
+    lr=0.001,
     batch_size=1,
     shuffle=False,
     epochs=1000
@@ -50,6 +51,8 @@ in_data, out_data = next(iter(data_loader))
 network = CnnFcNetwork(in_data)
 optimizer = optim.Adam(network.parameters(), lr=parameters['lr'])
 
+results=OrderedDict()
+
 for epoch in range(parameters['epochs']):
     total_loss = 0
     total_correct = 0
@@ -58,15 +61,15 @@ for epoch in range(parameters['epochs']):
         in_data, out_data = batch
         
         #runs the batch in the CNN
-        preds = network(in_data.float())
-       
+        feats_in = network(in_data.float())
+        feats_out = network(out_data.float())
         # plot_pred(preds.argmax(dim=3))
         
         #calculate Loss
         n = 0
         loss = 0
         
-        loss = F.cross_entropy(preds.view(81,2), out_data.view(-1))
+        loss = F.mse_loss(feats_in, feats_out)
         # loss.requires_grad = True
         optimizer.zero_grad()
         #BackProp
@@ -90,7 +93,9 @@ for epoch in range(parameters['epochs']):
         #     print(loss)
         #     total_loss += loss.item()
         
-        total_correct += correct(preds, out_data)
+        
+        total_correct += correct_output(feats_in, feats_out)
 
+    results[epoch] = (feats_in, feats_out)
     print("epoch:", epoch, "/  total_correct:", total_correct, "/  Loss:", total_loss)
    
