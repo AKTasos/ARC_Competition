@@ -12,16 +12,16 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 
 
-x = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+x = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
      [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
      [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
      [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
      [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]]
 
 y = [[1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -148,14 +148,19 @@ def trim_borders(matrix, bg, lines, columns):
             column[0] -= n
     
     if trimed_mat.size() == matrix.size():
-        trimed_mat, trimed_lines, trimed_columns = None, None, None
+        trimed_mat, trimed_lines, trimed_columns = matrix, line, columns
         
     return trimed_mat, trimed_lines, trimed_columns
 
 def sub_matrices(matrix, lines, columns):
-    
-    line_split = [l[0] for l in lines]
-    column_split = [c[0] for c in columns]
+    try:
+        line_split = [l[0] for l in lines]
+    except:
+        line_split =[lines[0]]
+    try:
+        column_split = [c[0] for c in columns]
+    except:
+        column_split = [columns[0]]
     mat = np.split(matrix, line_split, axis=0)
     print(mat)
     sub_m = []
@@ -181,7 +186,8 @@ class MatrixDecomposition():
         self.color, self.border_dict = detect_borders(self.matrix)
         self.bg = background(self.matrix)
         self.lines, self.columns, self.grid = detect_grids(self.matrix)
-        self.all_mat = [self.matrix]
+        self.all_mat = []
+       
         if self.lines or self.columns:
             self.trimed_mat, self.trimed_lines, self.trimed_columns = trim_borders(self.matrix, self.bg, self.lines, self.columns)
             self.all_mat.append(self.trimed_mat)
@@ -199,7 +205,16 @@ class MatrixDecomposition():
                             self.ssub_trimed_mat, self.ssub_trimed_lines, self.ssub_trimed_columns = trim_borders(smat, self.bg, self.ssub_lines, self.ssub_columns)
                             self.all_mat.append(self.ssub_trimed_mat)
 
-        
+        for idx, m in enumerate(self.all_mat):
+            self.all_mat[idx]=m.tolist()
+        try:
+            self.unique_mat = np.unique(self.all_mat, axis=0)
+        except:
+            self.unique_mat = np.unique(self.all_mat)
+        self.unique_mat_clean = []
+        for idx, l in enumerate(self.unique_mat):
+            if len(l)!=1:
+                self.unique_mat_clean.append(l)
 
 
 a = MatrixDecomposition(input1)       
