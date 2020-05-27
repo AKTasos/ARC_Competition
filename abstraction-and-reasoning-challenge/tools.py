@@ -13,37 +13,37 @@ from matplotlib import colors
 
 
 x = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-     [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-     [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-     [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-     [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]]
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 1, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]]
 
 y = [[1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 1, 1, 1, 1, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-     [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]]
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 z = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 1, 1, 1, 0, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 0, 0, 2, 2, 0, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 input1 = torch.tensor(x).view(1, 1, 10, 10)
 input2 = torch.tensor(y).view(1, 1, 10, 10)
@@ -66,10 +66,10 @@ def detect_borders(matrix):
                 border_dict[int(uv)] += int(count[i])
         max_color = max(border_dict, key=border_dict.get)
         if border_dict[max_color] < sum(matrix.size()):
-            color = "no clear borders"
+            color = -1
         else:
             color = max_color
-            return color, border_dict
+        return color, border_dict
 
 def detect_grids(matrix):
     lines = []
@@ -148,7 +148,7 @@ def trim_borders(matrix, bg, lines, columns):
             column[0] -= n
     
     if trimed_mat.size() == matrix.size():
-        trimed_mat, trimed_lines, trimed_columns = matrix, line, columns
+        trimed_mat, trimed_lines, trimed_columns = matrix, np.array(lines), np.array(columns)
         
     return trimed_mat, trimed_lines, trimed_columns
 
@@ -162,7 +162,7 @@ def sub_matrices(matrix, lines, columns):
     except:
         column_split = [columns[0]]
     mat = np.split(matrix, line_split, axis=0)
-    print(mat)
+    # print(mat)
     sub_m = []
     for sub_mat in mat:
         for m in np.split(sub_mat, column_split, axis=1):
@@ -187,6 +187,7 @@ class MatrixDecomposition():
         self.bg = background(self.matrix)
         self.lines, self.columns, self.grid = detect_grids(self.matrix)
         self.all_mat = []
+        self.mat_tensor = []
        
         if self.lines or self.columns:
             self.trimed_mat, self.trimed_lines, self.trimed_columns = trim_borders(self.matrix, self.bg, self.lines, self.columns)
@@ -213,10 +214,15 @@ class MatrixDecomposition():
             self.unique_mat = np.unique(self.all_mat)
         self.unique_mat_clean = []
         for idx, l in enumerate(self.unique_mat):
-            if len(l)!=1:
+            if len(l)>1:
                 self.unique_mat_clean.append(l)
+                l_tensor = torch.LongTensor(l).unsqueeze(0)
+                if l_tensor.dim()<3:
+                    l_tensor = l_tensor.unsqueeze(0)
+                self.mat_tensor.append(l_tensor)
+        
 
 
 a = MatrixDecomposition(input1)       
-b = MatrixDecomposition(input2)
-c = MatrixDecomposition(input3)
+# b = MatrixDecomposition(input2)
+# c = MatrixDecomposition(input3)

@@ -6,18 +6,18 @@ Created on Fri Mar 27 19:04:55 2020
 @author: aktasos
 """
 import json
-import itertools
 import numpy as np
 from collections import OrderedDict
 import os
 from pathlib import Path
 import torch
 import pandas as pd
-import matplotlib.pyplot as plt
+
+import itertools
+
 PATH = os.path.dirname(os.path.abspath(__file__))
 for dirname, _, filenames in os.walk(PATH):
     print(dirname)
-
 
 data_path = Path(PATH)
 training_path = data_path / 'training'
@@ -41,6 +41,51 @@ def data_openner(tasks, path):
         with open(task_file, 'r') as f:
             task_list.append(json.load(f))
     return task_list
+
+def detect_borders(matrix):
+        transp_matrix = matrix.transpose(0, 1)
+        up, u_count = matrix[0].unique(return_counts=True)
+        right, r_count = transp_matrix[0].unique(return_counts=True)
+        down, d_count = matrix[-1].unique(return_counts=True)
+        left, l_count = transp_matrix[-1].unique(return_counts=True)
+        values = torch.cat((up, right, down, left))
+        unique_values = values.unique()
+        count = torch.cat((u_count, r_count, d_count, l_count))
+        border_dict = {}
+        for uv in unique_values:
+            border_dict[int(uv)] = 0
+            indices = np.where(values == int(uv))[0]
+            for i in indices:
+                border_dict[int(uv)] += int(count[i])
+        max_color = max(border_dict, key=border_dict.get)
+        if border_dict[max_color] < sum(matrix.size()):
+            color = -1
+        else:
+            color = max_color
+        return color
+
+def detect_grids(matrix):
+    lines = []
+    columns = []
+    grid = False
+    for index, line in enumerate(matrix):
+        unique_values = line.unique()
+        if len(unique_values) == 1:
+            lines.append([index, int(unique_values)])
+    for index, column in enumerate(matrix.transpose(0, 1)):
+        unique_values = column.unique()
+        if len(unique_values) == 1:
+            columns.append([index, int(unique_values)])
+    if lines and columns:
+        grid = True
+    return lines, columns, grid
+
+def background(matrix):
+    if 0 in matrix.unique():
+        bg = 0
+    else:
+        bg = detect_borders(matrix)
+    return bg
 
 class ARCParameters():
     """class with all features(params) in ARC dataset"""
@@ -70,16 +115,11 @@ class ARCParameters():
 
         self.params_analysis_results = np.sum(res, 0)
         self.params_labels = task_n.params_labels
-    # def results(self):
-    #     for a, b in itertools.combinations(self.params_analysis_list, 2):
-    #         print(a==b)
-    #     for l in self.params_analysis_list:
 
     def save(self):
         """save all features(params) in json file"""
         data = pd.DataFrame(self.params_data, columns=self.params_labels)
         data.to_json("./training_results/params_data.json", orient='columns')
-
 
 class TaskParameters():
     """class with all features(params) in task"""
@@ -88,12 +128,9 @@ class TaskParameters():
         self.task_index = task_index
         self.nb_of_train = len(task['train'])
         self.train_dict_list = []
-        self.train_list = []
         self.params_comparison = OrderedDict()
         self.good_params_count = []
         self.good_params = OrderedDict()
-        self.nb_of_params = int()
-        self.params_labels = []
 
     def train_params(self):
         """extract all features(params) in task"""
@@ -102,21 +139,9 @@ class TaskParameters():
             data.basic_params()
             data.colors_params()
             data.colors_in_out()
-
-            # self.train_list.append(data.__dict__)  ##bring all attributes in a dictionary
+            data.others()
             self.train_dict_list.append(data.params)
-            # self.train_list += data.train_params
-        # self.params_comparison = self.train_list[0].fromkeys(self.train_list[0],[])
-        # self.good_params_count = self.train_list[0].fromkeys(self.train_list[0],0)    
-        # self.nb_of_params = len(data.train_params_dict)
-        
-        
-        # self.good_params_count = [0]*self.nb_of_params
-        # self.good_params = [0]*self.nb_of_params
-        # temp = [x for x in data.train_params_dict.keys()]
-        # self.params_labels = temp[:(len(temp)//2)]
-
-
+ 
     def compare_train(self):
         """compare features(params) in task to look if they change"""
         for key in self.train_dict_list[0]:
@@ -128,66 +153,14 @@ class TaskParameters():
                     break
             try:
                 val=set(k)
-            except:
-                val=np.unique(k)
-            if len(k) == len(f.train_dict_list) and len(val)==1:
+            except TypeError:
+                try:
+                    val=np.unique(k)
+                except:
+                    pass
+            if len(k) == len(self.train_dict_list) and len(val)==1:
                 self.good_params[key] = k[0]
         
-        
-        
-        
-        
-        # n = 0
-        # for a, b in itertools.combinations(self.train_dict_list, 2):
-        #     self.params_comparison.append([])
-        #     n += 1
-        #     for key in a.keys():
-
-        #         compare = (a[key] == b[key])
-        #         self.params_comparison[n-1].append(int(compare))
-
-
-
-    def count_good_params(self):
-        """count features(params) in task that does not change"""
-        for n in range(len(self.params_comparison)):
-            for i in range(self.nb_of_params):
-                self.good_params_count[i] += self.params_comparison[n][i]
-
-        good = np.where(np.array(self.good_params_count) == len(self.params_comparison))
-        for g in np.nditer(good):
-
-            self.good_params[int(g)] = 1
-
-    def plot_params(self):
-        """plot features(params)"""
-        
-        for p in range(len(self.train_list[0])):
-            plt.figure()
-            plt.title(self.params_labels[p])
-            x = []
-            y = []
-            x_array = np.array([])
-            
-           
-            for n in range(self.nb_of_train):
-                x.append(self.train_list[n*2][p])
-                y.append(self.train_list[n*2+1][p])
-                
-                x_array = np.append(x_array, [1, self.train_list[n*2][p], (self.train_list[n*2][p])**2])
-                
-                
-            # Normal Equation
-            y_array = np.array(y)
-            x_array = x_array.reshape(len(x_array)//3,3)
-            theta = np.linalg.pinv((np.transpose(x_array) @ x_array)) @ (np.transpose(x_array) @ y_array)
-            plt.scatter(x, y)
-            x_function = u=np.arange(min(x), max(x), 0.1)
-            y_function = theta[0] + (theta[1] * x_function) + (theta[2] * (x_function**2))
-            plt.plot(x_function, y_function)
-            plt.show()
-
-
 
 class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input']
     """class with all features(params) in one example"""
@@ -196,10 +169,19 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
         self.task_index = task_index
         self.input = np.array(train_data['input'])
         self.output = np.array(train_data['output'])
-        
-        # self.color_distrib = OrderedDict()
+        self.torch_input = torch.tensor(train_data['input'])
+        self.torch_output = torch.tensor(train_data['output'])
         self.params = OrderedDict([])
         self.train_params = []
+        self.params['nb_of_color_in'] = len(set(list(itertools.chain(*train_data['input']))))
+        self.params['nb_of_color_out'] = len(set(list(itertools.chain(*train_data['output']))))
+        if self.params['nb_of_color_out'] == 1:
+            self.params['single_color_out'] = 1
+            self.params['color_out'] = set(list(itertools.chain(*train_data['output']))).pop()
+        if self.params['nb_of_color_out'] == 2:
+            self.params['double_color_out'] = 1
+            self.params['color_out1'] = set(list(itertools.chain(*train_data['output']))).pop()    
+            self.params['color_out2'] = set(list(itertools.chain(*train_data['output']))).pop()
         
     def basic_params(self):
         self.params['input'] = float('0.'+(''.join(str(n) for l in self.train_data['input'] for n in l)))
@@ -214,41 +196,36 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
         self.params['ratio_y'] = self.params['y_in'] / self.params['y_out']
         self.params['nb_of_case_in'] = self.params['x_in'] * self.params['y_in']
         self.params['nb_of_case_out'] = self.params['x_out'] * self.params['y_out']
-        
-        
-    def colors_params(self):
-        max_color_case = 0 
-        """extract features(params) in one example"""
-        # color_max = 0
-        # nb_color_max = 0
-        # color_min = 0
-        # nb_color_min = 0
-        for key, data in self.train_data.items():
 
+    def colors_params(self):
+       
+        """extract features(params) in one example"""
+
+        for key, data in self.train_data.items():
+            max_color_case = 0 
             self.params[f'{key}_task_index'] = self.task_index
 
             if key == 'input':
 
                 nb_of_case = self.params['x_in'] * self.params['y_in']
-                nb_color_min = nb_of_case
-
             else:
-                
                 nb_of_case = self.params['x_out'] * self.params['y_out']
-                nb_color_min = nb_of_case
-
+                
             data = np.array(data)
-
             self.params[f"{key}_stdev"] = (np.std(data))
-            self.params[f'{key}_color_distrib_std_x'] = np.std(data, axis=0)
-            self.params[f'{key}_color_distrib_std_y'] = np.std(data, axis=1)
-            self.params[f'{key}_color_distrib_var_x'] = np.var(data, axis=0)
-            self.params[f'{key}_color_distrib_var_y'] = np.var(data, axis=1)
+           
+            for idx, ele in enumerate(np.std(data, axis=0)):
+                self.params[f'{key}_color_distrib_std_x_{idx}'] = ele
+            for idx, ele in enumerate(np.std(data, axis=1)):
+                self.params[f'{key}_color_distrib_std_y_{idx}'] = ele
+            for idx, ele in enumerate(np.var(data, axis=0)):
+                self.params[f'{key}_color_distrib_var_x_{idx}'] = ele         
+            for idx, ele in enumerate(np.var(data, axis=1)):
+                self.params[f'{key}_color_distrib_var_y_{idx}'] = ele    
 
-            
             for color in range(10):
                 case_by_color = (np.count_nonzero(data == color))
-                if color > 1 and case_by_color > max_color_case:
+                if color > 0 and case_by_color > max_color_case:
                     max_color_case = case_by_color
                     x, y = np.where(data == color)
                     self.params.update({
@@ -279,10 +256,7 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
                                         f'{key}_color_{color}_median_y': 0
                                         })
                 else:
-                    # if case_by_color > nb_color_max:
-                    #     nb_color_max = case_by_color
-                    # if case_by_color < nb_color_min:
-                    #     nb_color_max = case_by_color
+
                     x, y = np.where(data == color)
                     self.params.update({
                                         f'{key}_color_{color}_case_by_color': case_by_color,
@@ -297,23 +271,54 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
                                         f'{key}_color_{color}_median_y': np.median(y)
                                         })
 
-        # in_out = list(self.train_params_dict.values())   
-        # len(in_out)
-        # self.train_params.append(in_out[:len(in_out)//2])           
-        # self.train_params.append(in_out[len(in_out)//2:])          
-         
     def colors_in_out(self):
-        self.params['ratio_max_color']=self.params["input_max_color"]/self.params["output_max_color"]
-        self.params['ratio_max_color_case_by_color']=self.params['input_max_color_case_by_color']/self.params['output_max_color_case_by_color']
-        self.params['ratio_max_color_proportion']=self.params['input_max_color_proportion']/self.params['output_max_color_proportion']
-        self.params['ratio_max_color_stdev_x']=self.params['input_max_color_stdev_x']/self.params['output_max_color_stdev_x']
-        self.params['ratio_max_color_stdev_y']=self.params['input_max_color_stdev_y']/self.params['output_max_color_stdev_y']
-        self.params['ratio_max_color_var_x']=self.params['input_max_color_var_x']/self.params['output_max_color_var_x']
-        self.params['ratio_max_color_var-y']=self.params['input_max_color_var-y']/self.params['output_max_color_var-y']
-        self.params['ratio_max_color_mean_x']=self.params['input_max_color_mean_x']/self.params['output_max_color_mean_x']
-        self.params['ratio_max_color_mean_y']=self.params['input_max_color_mean_y']/self.params['output_max_color_mean_y']
-        self.params['ratio_max_color_median_x']=self.params['input_max_color_median_x']/self.params['output_max_color_median_x']
-        self.params['ratio_max_color_median_y']=self.params['input_max_color_median_y']/self.params['output_max_color_median_y']
+        try: 
+            self.params["input_max_color"] and self.params["output_max_color"]
+            self.params['ratio_max_color']=self.params["input_max_color"]/self.params["output_max_color"]
+            self.params['ratio_max_color_case_by_color']=self.params['input_max_color_case_by_color']/self.params['output_max_color_case_by_color']
+            self.params['ratio_max_color_proportion']=self.params['input_max_color_proportion']/self.params['output_max_color_proportion']
+            self.params['ratio_max_color_stdev_x']=self.params['input_max_color_stdev_x']/self.params['output_max_color_stdev_x']
+            self.params['ratio_max_color_stdev_y']=self.params['input_max_color_stdev_y']/self.params['output_max_color_stdev_y']
+            self.params['ratio_max_color_var_x']=self.params['input_max_color_var_x']/self.params['output_max_color_var_x']
+            self.params['ratio_max_color_var-y']=self.params['input_max_color_var-y']/self.params['output_max_color_var-y']
+            self.params['ratio_max_color_mean_x']=self.params['input_max_color_mean_x']/self.params['output_max_color_mean_x']
+            self.params['ratio_max_color_mean_y']=self.params['input_max_color_mean_y']/self.params['output_max_color_mean_y']
+            self.params['ratio_max_color_median_x']=self.params['input_max_color_median_x']/self.params['output_max_color_median_x']
+            self.params['ratio_max_color_median_y']=self.params['input_max_color_median_y']/self.params['output_max_color_median_y']
+        except:
+            pass
+     
+    def others(self):
+        
+        self.params['input_border_color'] = detect_borders(self.torch_input)
+        self.params['input_background_color'] = background(self.torch_input)
+        lines, columns, grid = detect_grids(self.torch_input)
+        l=0
+        c=0
+        self.params[f'input_nb_of_lines'] = len(lines)
+        self.params[f'input_nb_of_columns'] = len(columns)
+        for line in lines:
+            self.params[f'input_line_{l}_index'],  self.params[f'input_line_{l}_color'] = line
+            l+=1
+        for column in columns:
+            self.params[f'input_column_{c}_index'],  self.params[f'input_column_{c}_color'] = column
+            c+=1
+        self.params['output_border_color'] = detect_borders(self.torch_output)
+        self.params['output_background_color'] = background(self.torch_output)
+        lines, columns, grid = detect_grids(self.torch_output)   
+        l=0
+        c=0
+        self.params[f'output_nb_of_lines'] = len(lines)
+        self.params[f'output_nb_of_columns'] = len(columns)
+        for line in lines:
+            self.params[f'output_line_{l}_index'],  self.params[f'output_line_{l}_color'] = line
+            l+=1
+        for column in columns:
+            self.params[f'output_column_{c}_index'],  self.params[f'output_column_{c}_color'] = column
+            c+=1
+        
+        
+        
         
         # for color in range(10):   
         
@@ -330,22 +335,23 @@ class TrainParameters(): # train_data = train_tasks[0]['train'][0]       ['input
             
 
 
-train_tasks = data_openner(training_tasks, training_path)
+# train_tasks = data_openner(training_tasks, training_path)
 
-# arc_params = ARCParameters(train_tasks)
-# arc_params.analyse_parameters()
-# # # arc_params.save()
-# first = TaskParameters(train_tasks[0], 0)
-# first.train_params()
-# first.compare_train()
-# first.count_good_params()
-# first.plot_params()
+# # arc_params = ARCParameters(train_tasks)
+# # arc_params.analyse_parameters()
+# # # # arc_params.save()
+# # first = TaskParameters(train_tasks[0], 0)
+# # first.train_params()
+# # first.compare_train()
+# # first.count_good_params()
+# # first.plot_params()
 
 # first = TrainParameters(train_tasks[0]['train'][0], 0)
 # first.basic_params()
 # first.colors_params()
 # first.colors_in_out()
-f=TaskParameters(train_tasks[0],0)
+# first.others()
+# # f=TaskParameters(train_tasks[1],1)
 
-f.train_params()
-f.compare_train()
+# # f.train_params()
+# # f.compare_train()

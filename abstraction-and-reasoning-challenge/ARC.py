@@ -6,17 +6,24 @@ Created on Fri Mar 27 19:04:55 2020
 @author: aktasos
 """
 import os
+import pandas as pd
 from pathlib import Path
 from torch.utils.data import DataLoader
-from descriptive_stats import correct_output
-from multi_scale_networkconv import CnnFcNetwork
+from multi_scale_networkconv import OutputNetwork
 import torch.optim as optim
-import torch.nn as nn
 import torch.nn.functional as F
-from tensorfromdata import TasksTensorDataset, FeaturesTensorDataset, data_openner
+from tensorfromdata import AllTasksGroupedWithTest,  data_openner
 from plot_task import plot_pred
-import numpy as np
-from collections import OrderedDict
+import torch
+import torch.nn as nn
+
+def flattener(pred):
+    str_pred = str([row for row in pred])
+    str_pred = str_pred.replace(', ', '')
+    str_pred = str_pred.replace('[[', '|')
+    str_pred = str_pred.replace('][', '|')
+    str_pred = str_pred.replace(']]', '|')
+    return str_pred
 
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -24,13 +31,25 @@ DATA_PATH = Path(PATH)
 TRAINING_PATH = DATA_PATH / 'training'
 EVALUATION_PATH = DATA_PATH / 'evaluation'
 TEST_PATH = DATA_PATH / 'test'
-training_tasks = sorted(os.listdir(TRAINING_PATH))
+SUBMISSION_PATH = DATA_PATH / 'output'
+
+# evaluation_tasks = sorted(os.listdir(EVALUATION_PATH))
+# training_tasks = sorted(os.listdir(TRAINING_PATH))
+testing_tasks = sorted(os.listdir(TEST_PATH))
 
 FEATURES_DATA_PATH = "./training_results/params_data.json"
 
-train_tasks = data_openner(training_tasks, TRAINING_PATH)
-params_data = FeaturesTensorDataset(FEATURES_DATA_PATH, 0)
-task_data = TasksTensorDataset(train_tasks[0])
+# eval_tasks = data_openner(evaluation_tasks, EVALUATION_PATH)
+# train_tasks = data_openner(training_tasks, TRAINING_PATH)
+test_tasks = data_openner(testing_tasks, TEST_PATH)
+
+
+# eval_task_data = AllTasksGroupedWithTest(eval_tasks)
+# train_task_data = AllTasksGroupedWithTest(train_tasks)
+test_task_data = AllTasksGroupedWithTest(test_tasks)
+
+
+
 
 
 #parameters = dictionary of parameters for DataLoader and optim (dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
@@ -38,64 +57,56 @@ parameters = dict(
     lr=0.001,
     batch_size=1,
     shuffle=False,
-    epochs=1000
-
-    # ,nb_of_fclayers = [2,4]
-    # ,act_fonction=["relu","glu","tanh","sigmoid","softmax"]
-    # ,kernel_size = [4,8]
+    epochs=10
     )
-
-data_loader = DataLoader(dataset=task_data, batch_size=parameters['batch_size'], shuffle=False)
-in_data, out_data = next(iter(data_loader))
-
-network = CnnFcNetwork(in_data)
-optimizer = optim.Adam(network.parameters(), lr=parameters['lr'])
-
-results=OrderedDict()
-
-for epoch in range(parameters['epochs']):
-    total_loss = 0
-    total_correct = 0
-
-    for batch in data_loader:
-        in_data, out_data = batch
-        
-        #runs the batch in the CNN
-        feats_in = network(in_data.float())
-        feats_out = network(out_data.float())
-        # plot_pred(preds.argmax(dim=3))
-        
-        #calculate Loss
+results = []
+labels = []
+data_loader = DataLoader(dataset=test_task_data, batch_size=parameters['batch_size'], shuffle=False)
+t=0
+for batch in data_loader:
+    print(f'task_{t}')
+    t+=1
+    test_torch, in_out, out_size, feats, dict_feats = batch
+    print(out_size)
+    
+    # network = CnnFcNetwork(in_data)
+    outnet= OutputNetwork(feats, out_size=out_size)    
+    optimizer = optim.Adam(outnet.parameters(), lr=parameters['lr'])
+    for epoch in range(parameters['epochs']):
+        total_loss = 0
         n = 0
-        loss = 0
-        
-        loss = F.mse_loss(feats_in, feats_out)
-        # loss.requires_grad = True
-        optimizer.zero_grad()
-        #BackProp
-        loss.backward()
-        #update weights
-        optimizer.step()
-        n += 1
-       
-        total_loss += loss.item()
-        
-        
-        # for i in preds.view(-1):
-        #     loss = F.cross_entropy(i, out_data.view(-1)[n])
-        #     # loss.requires_grad = True
-        #     optimizer.zero_grad()
-        #     #BackProp
-        #     loss.backward()
-        #     #update weights
-        #     optimizer.step()
-        #     n += 1
-        #     print(loss)
-        #     total_loss += loss.item()
-        
-        
-        total_correct += correct_output(feats_in, feats_out)
-
-    results[epoch] = (feats_in, feats_out)
-    print("epoch:", epoch, "/  total_correct:", total_correct, "/  Loss:", total_loss)
-   
+        for i in in_out:
+            x, y = i
+            # plot_pred(x[0])
+            # plot_pred(y)
+            out_mat = outnet(x, out_size, feats.float(),y)
+            out_x, out_y = y[0].shape
+            # plot_pred(out_mat.view(1, 6, 10))
+            #calculate Loss
+            loss = 0
+            loss = F.cross_entropy(out_mat.view((out_x*out_y),10), y.view(-1))
+            optimizer.zero_grad()
+            #BackProp
+            loss.backward()
+            #update weights
+            optimizer.step()
+            n += 1
+            total_loss += loss.item()
+        print("epoch:", epoch, "/  Loss:", loss, "/  Total Loss:", total_loss)
+    
+    for test in test_torch:
+        test_mat = test[0]
+        test_id = test[1][0]
+        print(test_id)
+        pred_mat = outnet(test_mat, out_size, feats.float())
+        labels.append(test_id)
+        results.append(flattener(pred_mat.argmax(dim=3).tolist()[0]))
+        print(pred_mat.argmax(dim=3).shape)
+        plot_pred(pred_mat.argmax(dim=3))
+    
+SUBMISSION_PATH = Path('submission.csv')
+results_dict = {'output_id': labels, 'output' : results}
+res=pd.DataFrame(results_dict, columns=['output_id', 'output'])
+res.to_csv(SUBMISSION_PATH, index=False, header=False)
+    
+    
