@@ -14,8 +14,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 from tensorfromdata import AllTasksGroupedWithTest,  data_openner
 from plot_task import plot_pred
-import torch
-import torch.nn as nn
 
 def flattener(pred):
     str_pred = str([row for row in pred])
@@ -37,27 +35,20 @@ SUBMISSION_PATH = DATA_PATH / 'output'
 # training_tasks = sorted(os.listdir(TRAINING_PATH))
 testing_tasks = sorted(os.listdir(TEST_PATH))
 
-FEATURES_DATA_PATH = "./training_results/params_data.json"
-
 # eval_tasks = data_openner(evaluation_tasks, EVALUATION_PATH)
 # train_tasks = data_openner(training_tasks, TRAINING_PATH)
 test_tasks = data_openner(testing_tasks, TEST_PATH)
 
-
 # eval_task_data = AllTasksGroupedWithTest(eval_tasks)
 # train_task_data = AllTasksGroupedWithTest(train_tasks)
 test_task_data = AllTasksGroupedWithTest(test_tasks)
-
-
-
-
 
 #parameters = dictionary of parameters for DataLoader and optim (dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 parameters = dict(
     lr=0.001,
     batch_size=1,
     shuffle=False,
-    epochs=10
+    epochs=1
     )
 results = []
 labels = []
@@ -68,8 +59,6 @@ for batch in data_loader:
     t+=1
     test_torch, in_out, out_size, feats, dict_feats = batch
     print(out_size)
-    
-    # network = CnnFcNetwork(in_data)
     outnet= OutputNetwork(feats, out_size=out_size)    
     optimizer = optim.Adam(outnet.parameters(), lr=parameters['lr'])
     for epoch in range(parameters['epochs']):
@@ -77,11 +66,9 @@ for batch in data_loader:
         n = 0
         for i in in_out:
             x, y = i
-            # plot_pred(x[0])
-            # plot_pred(y)
             out_mat = outnet(x, out_size, feats.float(),y)
             out_x, out_y = y[0].shape
-            # plot_pred(out_mat.view(1, 6, 10))
+
             #calculate Loss
             loss = 0
             loss = F.cross_entropy(out_mat.view((out_x*out_y),10), y.view(-1))
