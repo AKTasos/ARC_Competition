@@ -5,54 +5,119 @@ Created on Fri Mar 27 19:04:55 2020
 
 @author: aktasos
 """
-import itertools
-import numpy as np
-
-
-import os 
-import json
-
+import os
+import pandas as pd
 from pathlib import Path
-from torch.utils.data import Dataset
-from collections import OrderedDict
-from descriptive_stats import ARCParameters
-path = os.path.dirname(os.path.abspath(__file__))
-for dirname, _, filenames in os.walk(path):
-        print(dirname)
-        
+from torch.utils.data import DataLoader
+from multi_scale_networkconv import OutputNetwork
+import torch.optim as optim
+import torch.nn.functional as F
+from tensorfromdata import AllTasksGroupedWithTest,  data_openner
+# from plot_task import plot_pred
+from descriptive_stats_new import TrainParameters
+
+def flattener(pred):
+    str_pred = str([row for row in pred])
+    str_pred = str_pred.replace(', ', '')
+    str_pred = str_pred.replace('[[', '|')
+    str_pred = str_pred.replace('][', '|')
+    str_pred = str_pred.replace(']]', '|')
+    return str_pred
 
 
-data_path = Path(path)
-training_path = data_path / 'training'
-evaluation_path = data_path / 'evaluation'
-test_path = data_path / 'test'
-training_tasks = sorted(os.listdir(training_path))
+PATH = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = Path(PATH)
+TRAINING_PATH = DATA_PATH / 'training'
+EVALUATION_PATH = DATA_PATH / 'evaluation'
+TEST_PATH = DATA_PATH / 'test'
+SUBMISSION_PATH = DATA_PATH / 'output'
 
+# evaluation_tasks = sorted(os.listdir(EVALUATION_PATH))
+# training_tasks = sorted(os.listdir(TRAINING_PATH))
+testing_tasks = sorted(os.listdir(TEST_PATH))
 
+# eval_tasks = data_openner(evaluation_tasks, EVALUATION_PATH)
+# train_tasks = data_openner(training_tasks, TRAINING_PATH)
+test_tasks = data_openner(testing_tasks, TEST_PATH)
 
-def data_openner(tasks, path):
-    task_list =[]
-    for task in tasks :
-        task_file = str(path / task)
-        with open(task_file, 'r') as f:
-            task_list.append(json.load(f))
+# eval_task_data = AllTasksGroupedWithTest(eval_tasks)
+# train_task_data = AllTasksGroupedWithTest(train_tasks)
+test_task_data = AllTasksGroupedWithTest(test_tasks)
+
+#parameters = dictionary of parameters for DataLoader and optim (dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
+parameters = dict(
+    lr=0.001,
+    batch_size=1,
+    shuffle=False,
+    epochs=1
+    )
+results = []
+results100 = []
+results200 = []
+resultsmod = []
+labels = []
+data_loader = DataLoader(dataset=test_task_data, batch_size=parameters['batch_size'], shuffle=False)
+t=0
+for batch in data_loader:
+    print(f'task_{t}')
+    t+=1
+    test_torch, in_out, out_size, feats, dict_feats = batch
+    print(out_size)
+    outnet= OutputNetwork(feats, out_size=out_size)    
+    optimizer = optim.Adam(outnet.parameters(), lr=parameters['lr'])
+    for epoch in range(parameters['epochs']):
+        total_loss = 0
+        n = 0
+        for i in in_out:
+            x, y = i
+            out_mat = outnet(x, out_size, feats.float(),y)
+            out_x, out_y = y[0].shape
+
+            #calculate Loss
+            loss = 0
+            loss = F.cross_entropy(out_mat.view((out_x*out_y),10), y.view(-1))
+            optimizer.zero_grad()
+            #BackProp
+            loss.backward()
+            #update weights
+            optimizer.step()
             
-    return task_list
-
-
-
-train_tasks = data_openner(training_tasks, training_path)      
-
-
-# first=TaskParameters(train_tasks[0])  
-# first.train_params()
-# first.compare_train()
-# first.count_good_params()
-
-results = ARCParameters(train_tasks)
-results.analyse_parameters()
-
-
-
-
-
+            total_loss += loss.item()
+        print("epoch:", epoch, "/  Loss:", loss, "/  Total Loss:", total_loss)
+        n += 1
+        
+        if n == 50:
+                for test in test_torch:
+                    test_mat = test[0]
+                    test_id = test[1][0]
+                    pred_mat = outnet(test_mat, out_size, feats.float())
+                    labels.append(test_id)
+                    results100.append(flattener(pred_mat.argmax(dim=3).tolist()[0]))
+                
+        if n == 300:
+            for test in test_torch:
+                test_mat = test[0]
+                pred_mat = outnet(test_mat, out_size, feats.float())
+                pred_str = flattener(pred_mat.argmax(dim=3).tolist()[0])
+                results200.append(pred_str)     
+                
+                testfeat = dict()
+                testfeat['input']=test_mat[0][0][0].int().tolist()
+                testfeat['output']=pred_mat.argmax(dim=3)[0].tolist()
+                
+                tested = TrainParameters(testfeat,0)
+                tested.basic_params()
+                tested.colors_params()
+                tested.colors_in_out()
+                tested.others()
+                
+for idx, ele in enumerate(results100):
+    
+    results.append(f'{results100[idx]} {results200[idx]} {resultsmod[idx]}')  
+    
+SUBMISSION_PATH = Path('submission.csv')
+results_dict = {'output_id': labels, 'output' : results}
+res=pd.DataFrame(results_dict, columns=['output_id', 'output'])
+res.to_csv(SUBMISSION_PATH, index=False)
+    
+    
