@@ -13,7 +13,8 @@ from multi_scale_networkconv import OutputNetwork
 import torch.optim as optim
 import torch.nn.functional as F
 from tensorfromdata import AllTasksGroupedWithTest,  data_openner
-from plot_task import plot_pred
+# from plot_task import plot_pred
+from descriptive_stats_new import TrainParameters
 
 def flattener(pred):
     str_pred = str([row for row in pred])
@@ -51,6 +52,9 @@ parameters = dict(
     epochs=1
     )
 results = []
+results100 = []
+results200 = []
+resultsmod = []
 labels = []
 data_loader = DataLoader(dataset=test_task_data, batch_size=parameters['batch_size'], shuffle=False)
 t=0
@@ -77,23 +81,43 @@ for batch in data_loader:
             loss.backward()
             #update weights
             optimizer.step()
-            n += 1
+            
             total_loss += loss.item()
         print("epoch:", epoch, "/  Loss:", loss, "/  Total Loss:", total_loss)
+        n += 1
+        
+        if n == 50:
+                for test in test_torch:
+                    test_mat = test[0]
+                    test_id = test[1][0]
+                    pred_mat = outnet(test_mat, out_size, feats.float())
+                    labels.append(test_id)
+                    results100.append(flattener(pred_mat.argmax(dim=3).tolist()[0]))
+                
+        if n == 300:
+            for test in test_torch:
+                test_mat = test[0]
+                pred_mat = outnet(test_mat, out_size, feats.float())
+                pred_str = flattener(pred_mat.argmax(dim=3).tolist()[0])
+                results200.append(pred_str)     
+                
+                testfeat = dict()
+                testfeat['input']=test_mat[0][0][0].int().tolist()
+                testfeat['output']=pred_mat.argmax(dim=3)[0].tolist()
+                
+                tested = TrainParameters(testfeat,0)
+                tested.basic_params()
+                tested.colors_params()
+                tested.colors_in_out()
+                tested.others()
+                
+for idx, ele in enumerate(results100):
     
-    for test in test_torch:
-        test_mat = test[0]
-        test_id = test[1][0]
-        print(test_id)
-        pred_mat = outnet(test_mat, out_size, feats.float())
-        labels.append(test_id)
-        results.append(flattener(pred_mat.argmax(dim=3).tolist()[0]))
-        print(pred_mat.argmax(dim=3).shape)
-        plot_pred(pred_mat.argmax(dim=3))
+    results.append(f'{results100[idx]} {results200[idx]} {resultsmod[idx]}')  
     
 SUBMISSION_PATH = Path('submission.csv')
 results_dict = {'output_id': labels, 'output' : results}
 res=pd.DataFrame(results_dict, columns=['output_id', 'output'])
-res.to_csv(SUBMISSION_PATH, index=False, header=False)
+res.to_csv(SUBMISSION_PATH, index=False)
     
     
