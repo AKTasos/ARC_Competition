@@ -9,8 +9,17 @@ Created on Fri May  1 18:34:57 2020
 import torch
 import numpy as np
 
+def flattener(pred):
+    """Flatten the matrix for the submission"""
+    str_pred = str([row for row in pred])
+    str_pred = str_pred.replace(', ', '')
+    str_pred = str_pred.replace('[[', '|')
+    str_pred = str_pred.replace('][', '|')
+    str_pred = str_pred.replace(']]', '|')
+    return str_pred
 
 def detect_borders(matrix):
+    """detects values present in border of matrix"""
     transp_matrix = matrix.transpose(0, 1)
     up, u_count = matrix[0].unique(return_counts=True)
     right, r_count = transp_matrix[0].unique(return_counts=True)
@@ -33,6 +42,7 @@ def detect_borders(matrix):
     return color, border_dict
 
 def detect_grids(matrix):
+    """ detects lines and columns in matrices"""
     lines = []
     columns = []
     grid = False
@@ -49,6 +59,7 @@ def detect_grids(matrix):
     return lines, columns, grid
 
 def background(matrix):
+    """if there is no 0 value, select the majority value in the border as background"""
     if 0 in matrix.unique():
         bg = 0
     else:
@@ -56,6 +67,7 @@ def background(matrix):
     return bg
 
 def trim_borders(matrix, bg, lines, columns):
+    """if there is borders with only background value, trim this border"""
     nb_of_lines, nb_of_columns = matrix.size()
     trimed_mat = matrix
     trim = []
@@ -112,6 +124,7 @@ def trim_borders(matrix, bg, lines, columns):
     return trimed_mat, trimed_lines, trimed_columns
 
 def sub_matrices(matrix, lines, columns):
+    """if there is section in matrix separated by lines or columns divide and creates submatrices"""
     try:
         line_split = [l[0] for l in lines]
     except:
@@ -130,6 +143,7 @@ def sub_matrices(matrix, lines, columns):
     return sub_m
 
 class MatrixDecomposition():
+    """ matrix class with the initial matrix and features of the matrix: (background, borders, lines, columns, submatrices)"""
     def __init__(self, matrix):
         self.matrix = matrix[0][0]
         self.color, self.border_dict = detect_borders(self.matrix)
@@ -137,7 +151,7 @@ class MatrixDecomposition():
         self.lines, self.columns, self.grid = detect_grids(self.matrix)
         self.all_mat = []
         self.mat_tensor = []
-        
+
         if self.lines or self.columns:
             self.trimed_mat, self.trimed_lines, self.trimed_columns = trim_borders(self.matrix, self.bg, self.lines, self.columns)
             self.all_mat.append(self.trimed_mat)

@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch
 
 class OutputNetwork(nn.Module):
+    """Convolutionnal neural network """
     def __init__(self, feats, in_channels=1, kernel_size=1, nb_of_fclayers=10, out_size=(30, 30)):
 
         self.in_channels = in_channels
@@ -69,7 +70,7 @@ class OutputNetwork(nn.Module):
             else:
                 all_x = torch.cat((all_x, x.view(-1)), dim=0)
         x = all_x.view(1, 1, -1)
-        x = self.AdaptiveAvgPool1d_1(x)           
+        x = self.AdaptiveAvgPool1d_1(x)
         f = self.featfc(feats)
         x = torch.cat((x.view(-1), f.view(-1)), dim=0)
         x = self.fc(x)

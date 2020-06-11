@@ -10,35 +10,35 @@ import torch
 import numpy as np
 import json
 from descriptive_stats_new import TaskParameters
-from tools import *
+from tools import MatrixDecomposition
 
 def data_openner(tasks, path):
     """open and load json files"""
     task_list = []
     for task in tasks:
-        labels =  task
+        labels = task
         task_file = str(path / task)
         with open(task_file, 'r') as f:
-            task_list.append((json.load(f),labels))
+            task_list.append((json.load(f), labels))
     return task_list
 
-class AllTasksGroupedWithTest(Dataset): 
-    # train_tasks = train_tasks[x]
-     # train_tasks = train_tasks[x]
+class AllTasksGroupedWithTest(Dataset):
+    """prepare data for the dataloader"""
+
     def __init__(self, all_task):
-        t=0
+        t = 0
         self.all_task = all_task
         self.dataset = []
         for task_info in self.all_task:
             task = task_info[0]
             self.task_id = task_info[1]
-            feat = TaskParameters(task,t)
+            feat = TaskParameters(task, t)
             feat.train_params()
             feat.compare_train()
             max_x_out = 0
             max_y_out = 0
             # print(t)
-            t+=1
+            t += 1
             in_out_torch = []
             test_torch = []
             test_nb = 0
@@ -56,8 +56,8 @@ class AllTasksGroupedWithTest(Dataset):
             for train in task['train']:
                 in_mat = train['input']
                 out_mat = train['output']
-                if len(train['input'][0])==1 or len(train['input'])==1:
-                    in_mat = np.kron(train['input'],[[1,1],[1,1]])
+                if len(train['input'][0]) == 1 or len(train['input']) == 1:
+                    in_mat = np.kron(train['input'], [[1,1], [1,1]])
                 x_in = len(in_mat[0])
                 y_in = len(in_mat)
                 x_out = len(out_mat[0])
@@ -71,7 +71,7 @@ class AllTasksGroupedWithTest(Dataset):
                 if x_out > max_x_out:
                     max_x_out = x_out
                 if y_out > max_y_out:
-                    max_y_out = y_out   
+                    max_y_out = y_out
             self.dataset.append((test_torch, in_out_torch, (max_x_out, max_y_out), torch.tensor([*feat.good_params.values()]), feat.good_params))
         self.nb_of_tasks = len(self.dataset)        
 
